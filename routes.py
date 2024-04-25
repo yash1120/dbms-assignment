@@ -36,7 +36,10 @@ def login():
     # Check if they are submitting details, or they are just logging in
     if (request.method == 'POST'):
         # submitting details
-        login_return_data = check_login(request.form['id'], request.form['password'])
+        id = request.form['id']
+        password = request.form['password']
+
+        login_return_data = check_login(id,password)
 
         # If they have incorrect details
         if login_return_data is None:
