@@ -105,3 +105,11 @@ def updateMenuItem(name, description, categoryone, categorytwo, categorythree, c
 
 
 
+
+
+conn = openConnection()
+cur = conn.cursor()
+cur.execute("SELECT * FROM staff")
+rows = cur.fetchall()
+print(rows)
+cur.close()
