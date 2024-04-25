@@ -10,8 +10,8 @@ Connect to the database using the connection string
 '''
 def openConnection():
     # connection parameters - ENTER YOUR LOGIN AND PASSWORD HERE
-    userid = "y24s1c9120_unikey"
-    passwd = ""
+    userid = "y24s1c9120_yash0351"
+    passwd = "yashgoyal"
     myHost = "awsprddbs4836.shared.sydney.edu.au"
 
     # Create a connection to the database
@@ -67,3 +67,11 @@ Update an existing menu item
 def updateMenuItem(name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price, reviewdate, reviewer):
 
     return
+
+
+conn = openConnection()
+cur = conn.cursor()
+cur.execute("SELECT * FROM staff")
+rows = cur.fetchall()
+print(rows)
+cur.close()
