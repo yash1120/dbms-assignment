@@ -47,8 +47,29 @@ print(checkStaffLogin('jwalker','876'))
 List all the associated menu items in the database by staff
 '''
 def findMenuItemsByStaff(staffID):
+    # Establish a database connection and create a cursor
+    curs = openConnection().cursor()
 
-    return
+    # Query to select menu items reviewed by the given staff member
+    query = f"""
+            SELECT * 
+            FROM MenuItem 
+            WHERE Reviewer = '{staffID}'
+            """
+
+    # Execute the query
+    curs.execute(query)
+
+    # Fetch all the rows
+    rows = curs.fetchall()
+    if rows == []:
+        return None
+
+    # Close the cursor
+    curs.close()
+
+    # Return the list of menu items reviewed by the staff member
+    return rows
 
 '''
 SQL Query for part 2. 
@@ -80,36 +101,105 @@ Find a list of menu items based on the searchString provided as parameter
 See assignment description for search specification
 '''
 def findMenuItemsByCriteria(searchString):
+    # Establish a database connection and create a cursor
+    curs = openConnection().cursor()
 
-    return
+    # Query to select menu items based on name or description containing the search string
+    query = f"""
+            SELECT * 
+            FROM MenuItem 
+            WHERE Name ILIKE '%{searchString}%' OR Description ILIKE '%{searchString}%'
+            """
+
+    # Execute the query
+    curs.execute(query)
+
+    # Fetch all the rows
+    rows = curs.fetchall()
+
+    # Close the cursor
+    curs.close()
+
+    # Return the list of menu items matching the search criteria
+    return rows
+
 
 
 '''
 Add a new menu item
 '''
 def addMenuItem(name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price):
+    # Establish a database connection and create a cursor
+    conn = openConnection()
+    curs = conn.cursor()
 
-    return
+    # Query to insert a new menu item into the MenuItem table
+    query = f"""
+            INSERT INTO MenuItem (Name, Description, CategoryOne, CategoryTwo, CategoryThree, CoffeeType, MilkKind, Price)
+            VALUES ('{name}', '{description}', {categoryone}, {categorytwo}, {categorythree}, {coffeetype}, {milkkind}, {price})
+            """
+
+    try:
+        # Execute the query
+        curs.execute(query)
+        # Commit the transaction
+        conn.commit()
+        # Close the cursor and connection
+        curs.close()
+        conn.close()
+        return True  # Return True if the item was added successfully
+    except Exception as e:
+        # If an error occurs, rollback the transaction and return False
+        conn.rollback()
+        curs.close()
+        conn.close()
+        print("Error:", e)
+        return False
+
 
 
 '''
 Update an existing menu item
 '''
 def updateMenuItem(name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price, reviewdate, reviewer):
+    # Establish a database connection and create a cursor
+    conn = openConnection()
+    curs = conn.cursor()
 
-    return
+    # Query to update an existing menu item in the MenuItem table
+    query = f"""
+            UPDATE MenuItem 
+            SET Description = '{description}', 
+                CategoryOne = {categoryone}, 
+                CategoryTwo = {categorytwo}, 
+                CategoryThree = {categorythree}, 
+                CoffeeType = {coffeetype}, 
+                MilkKind = {milkkind}, 
+                Price = {price}, 
+                ReviewDate = '{reviewdate}', 
+                Reviewer = '{reviewer}'
+            WHERE Name = '{name}'
+            """
+
+    try:
+        # Execute the query
+        curs.execute(query)
+        # Commit the transaction
+        conn.commit()
+        # Close the cursor and connection
+        curs.close()
+        conn.close()
+        return True  # Return True if the item was updated successfully
+    except Exception as e:
+        # If an error occurs, rollback the transaction and return False
+        conn.rollback()
+        curs.close()
+        conn.close()
+        print("Error:", e)
+        return False
 
 
 
 
 
 
-
-
-
-conn = openConnection()
-cur = conn.cursor()
-cur.execute("SELECT * FROM staff")
-rows = cur.fetchall()
-print(rows)
-cur.close()
