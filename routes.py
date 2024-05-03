@@ -123,6 +123,8 @@ def new_menuitem():
         return render_template('new_menuitem.html', user=user_details, times=times, session=session, page=page)
 
 	# If we're adding a new menu item
+
+
     success = database.addMenuItem(request.form['name'],
                               request.form['description'],
                               request.form['categoryone'],
@@ -130,7 +132,9 @@ def new_menuitem():
                               request.form['categorythree'],
                               request.form['coffeetype'],
                               request.form['milkkind'],
-                              request.form['price'])
+                              request.form['price'],
+
+                              )
     if(success == True):
         page['bar'] = True
         flash("Menu item added!")
