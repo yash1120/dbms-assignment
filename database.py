@@ -212,6 +212,33 @@ FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryi
     # Return the list of menu items matching the search criteria
     return result
 
+'''
+SELECT m.menuitemid, m.name, m.description, cat1.categoryname as categoryname1, cat2.categoryname as categoryname2, cat3.categoryname as categoryname3, c.coffeetypename, mk.milkkindname, m.price, m.reviewdate, s.firstname, s.lastname 
+FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryid) 
+				LEFT OUTER JOIN category cat2 ON (m.categorytwo = cat2.categoryid)
+				LEFT OUTER JOIN category cat3 ON (m.categorythree = cat3.categoryid)
+				LEFT OUTER JOIN coffeetype c ON (m.coffeetype = c.coffeetypeid)
+				LEFT OUTER JOIN milkkind mk ON (m.milkkind = mk.milkkindid)
+				LEFT OUTER JOIN staff s ON (m.reviewer = s.staffid)
+WHERE 	(LOWER(m.name) like '%fee%' OR 
+		LOWER(m.description) like '%fee%' OR 
+		LOWER(cat1.categoryname) like '%fee%' OR 
+		LOWER(cat2.categoryname) like '%fee%' OR 
+		LOWER(cat3.categoryname) like '%fee%' OR 
+		LOWER(c.coffeetypename) like '%fee%' OR 
+		LOWER(mk.milkkindname) like '%fee%' OR 
+		LOWER(s.firstname) like '%fee%' OR 
+		LOWER(s.lastname) like '%fee%') AND 
+		(m.reviewdate > '2014/05/03' OR m.reviewdate IS NULL)
+ORDER BY s.firstname DESC, m.reviewdate DESC
+
+
+'''
+
+
+
+
+
 
 """
 Add a new menu item
