@@ -91,22 +91,81 @@ def openConnection():
 Validate staff based on username and password
 """
 
+def checkAndCreateCheckStaffLoginProcedure():
+    conn = openConnection()
+    curs = conn.cursor()
+    try:
+        curs.execute("SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'check_staff_login')")
+        procedure_exists = curs.fetchone()[0]
+        if not procedure_exists:
+            curs.execute(""" 
+                CREATE OR REPLACE FUNCTION check_staff_login(
+                    p_staffID VARCHAR, 
+                    p_password VARCHAR, 
+                    OUT p_result BOOLEAN
+                )
+                AS $$
+                BEGIN
+                    SELECT TRUE INTO p_result 
+                    FROM staff 
+                    WHERE staffID = p_staffID 
+                    AND password = p_password 
+                    LIMIT 1;
+                    
+                    EXCEPTION 
+                        WHEN NO_DATA_FOUND THEN
+                            p_result := FALSE;
+                END;
+                $$ LANGUAGE plpgsql;
+            """)
+            print("Stored procedure check_staff_login created successfully")
+            curs.execute("COMMIT")
+        else:
+            print("Stored procedure check_staff_login already exists")
+    except psycopg2.Error as err:
+        print(f"Error: {err}")
+    finally:
+        curs.close()
 
 def checkStaffLogin(staffID, password):
-
-    curs = openConnection().cursor()
-    query = (
-        f"SELECT * FROM staff WHERE staffID = '{staffID}' and password = '{password}'"
-    )
-    curs.execute(query)
-    row = curs.fetchall()
-    curs.close()
-    if row == []:
+    conn = openConnection()
+    
+    try:
+        checkAndCreateCheckStaffLoginProcedure()
+        curs = conn.cursor()
+        try:
+            curs.callproc('check_staff_login', (staffID, password,))
+            result = curs.fetchone()[0]
+            if result:
+                q = f"SELECT * FROM staff WHERE staffID = '{staffID}' and password = '{password}'"
+                curs.execute(q)
+                row = curs.fetchall()
+                return row[0]
+        except psycopg2.Error as err:
+            print(f"Error: {err}")
+            return None
+        finally:
+            curs.close()
+    except psycopg2.Error as err:
+        print(f"Error: {err}")
         return None
-    return list(row[0])
 
 
-print(checkStaffLogin("jwalker", "876"))
+# def checkStaffLogin(staffID, password):
+
+#     curs = openConnection().cursor()
+#     query = (
+#         f"SELECT * FROM staff WHERE staffID = '{staffID}' and password = '{password}'"
+#     )
+#     curs.execute(query)
+#     row = curs.fetchall()
+#     curs.close()
+#     if row == []:
+#         return None
+#     return list(row[0])
+
+
+# print(checkStaffLogin("jwalker", "876"))
 """
 List all the associated menu items in the database by staff
 """
@@ -180,7 +239,7 @@ def findMenuItemsByCriteria(searchString):
     curs = openConnection().cursor()
     today_date = datetime.datetime.now()
     oldest_date = today_date - relativedelta(years=10)
-    print("oldest date",oldest_date)
+    print("oldest date", oldest_date)
 
     # Query to select menu items based on name or description containing the search string
     query = f"""
@@ -212,7 +271,8 @@ FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryi
     # Return the list of menu items matching the search criteria
     return result
 
-'''
+
+"""
 SELECT m.menuitemid, m.name, m.description, cat1.categoryname as categoryname1, cat2.categoryname as categoryname2, cat3.categoryname as categoryname3, c.coffeetypename, mk.milkkindname, m.price, m.reviewdate, s.firstname, s.lastname 
 FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryid) 
 				LEFT OUTER JOIN category cat2 ON (m.categorytwo = cat2.categoryid)
@@ -233,16 +293,13 @@ WHERE 	(LOWER(m.name) like '%fee%' OR
 ORDER BY s.firstname DESC, m.reviewdate DESC
 
 
-'''
-
-
-
-
+"""
 
 
 """
 Add a new menu item
 """
+
 
 def getCategoryId(category):
     curs = openConnection().cursor()
@@ -254,6 +311,7 @@ def getCategoryId(category):
         return None
     return row[0][0]
 
+
 def getCoffeeTypeId(coffeetype):
     curs = openConnection().cursor()
     query = f"SELECT coffeetypeid FROM coffeetype WHERE coffeetypename = '{coffeetype}'"
@@ -263,6 +321,7 @@ def getCoffeeTypeId(coffeetype):
     if row == []:
         return None
     return row[0][0]
+
 
 def getMilkKindId(milkkind):
     curs = openConnection().cursor()
@@ -279,20 +338,16 @@ def checkLength(value, length):
     if len(value) > length:
         return False
     return True
-def addMenuItem(
-    name,
-    description,
-    categoryone,
-    categorytwo,
-    categorythree,
-    coffeetype,
-    milkkind,
-    price,
-):
+
+
+
+
+def addMenuItem(name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price):
     # Establish a database connection and create a cursor
     conn = openConnection()
     curs = conn.cursor()
-        
+
+    # Clean and format input data
     categoryone = categoryone.strip().lower().capitalize()
     categorytwo = categorytwo.strip().lower().capitalize()
     categorythree = categorythree.strip().lower().capitalize()
@@ -300,70 +355,50 @@ def addMenuItem(
     milkkind = milkkind.strip().lower().capitalize()
     description = description.strip()
 
-    # Query to insert a new menu item into the MenuItem table
-    if name == '' or categoryone == '' or price == '':
+    # Check for required fields
+    if not name or not categoryone or not price:
         return False
-    
-    if coffeetype == '' and milkkind != '':
-        return False
-    
-    if getCategoryId(categoryone) == None:
-        return False
-    if categorytwo != '' and getCategoryId(categorytwo) == None:
-        return False
-    if categorythree != '' and getCategoryId(categorythree) == None:
-        return False
-    
 
-    categoryone_id = getCategoryId(categoryone)
+    # Check if coffee type is provided but milk kind is missing
+    if not coffeetype and milkkind:
+        return False
 
-    categorytwo_id = getCategoryId(categorytwo)
-    categorythree_id = getCategoryId(categorythree)
-    coffeetype_id = getCoffeeTypeId(coffeetype)
-    milkkind_id = getMilkKindId(milkkind)
+    # Validate categories
+    for category in [categoryone, categorytwo, categorythree]:
+        if category and getCategoryId(category) is None:
+            return False
 
-    if categorytwo_id == None and categorytwo != '':
+    # Validate coffee type and milk kind
+    for item, function in [(coffeetype, getCoffeeTypeId), (milkkind, getMilkKindId)]:
+        if item and function(item) is None:
+            return False
+
+    # Check length of name and description
+    if not checkLength(name, 30) or not checkLength(description, 150):
         return False
-    if categorythree_id == None and categorythree != '':
-        return False
-    if coffeetype_id == None and coffeetype != '':
-        return False
-    if milkkind_id == None and milkkind != '':
-        return False
-    
-    if not checkLength(name, 30):
-        return False
-    if not checkLength(description, 150):
-        return False
-    
-    if description == '':
+
+    # Format description if empty
+    if not description:
         description = None
-    
 
+    # Validate and format price
     try:
-        price = round(float(price),2)
+        price = round(float(price), 2)
+        if price < 0:
+            return False
     except ValueError:
         return False
-    
-    if price < 0:
-        return False
-    
-    if categorytwo_id == None:
-        categorytwo_id = 'NULL'
-    if categorythree_id == None:
-        categorythree_id = 'NULL'
-    if coffeetype_id == None:
-        coffeetype_id = 'NULL'
-    if milkkind_id == None:
-        milkkind_id = 'NULL'
-    if description == None:
-        description = 'NULL'
-    
 
-    
+    # Format optional fields if not provided
+    categorytwo_id = getCategoryId(categorytwo) if categorytwo else "NULL"
+    categorythree_id = getCategoryId(categorythree) if categorythree else "NULL"
+    coffeetype_id = getCoffeeTypeId(coffeetype) if coffeetype else "NULL"
+    milkkind_id = getMilkKindId(milkkind) if milkkind else "NULL"
+    description = f"'{description}'" if description else "NULL"
 
-    query = f"""INSERT INTO MenuItem (Name, Description, CategoryOne, CategoryTwo, CategoryThree, CoffeeType, MilkKind, Price,ReviewDate,reviewer)
-            VALUES ('{name}','{description}',{categoryone_id}, {categorytwo_id}, {categorythree_id}, {coffeetype_id}, {milkkind_id}, {price},NULL,NULL)
+    # Construct query
+    query = f"""INSERT INTO MenuItem (Name, Description, CategoryOne, CategoryTwo, CategoryThree, CoffeeType, MilkKind, Price, ReviewDate, reviewer)
+                VALUES ('{name}', {description}, {getCategoryId(categoryone)}, {categorytwo_id}, {categorythree_id}, {coffeetype_id}, {milkkind_id}, {price}, NULL, NULL)
             """
 
     try:
@@ -389,35 +424,66 @@ Update an existing menu item
 """
 
 
-def updateMenuItem(
-    name,
-    description,
-    categoryone,
-    categorytwo,
-    categorythree,
-    coffeetype,
-    milkkind,
-    price,
-    reviewdate,
-    reviewer,
-):
+def updateMenuItem(menuitem_id, name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price, reviewdate, reviewer):
     # Establish a database connection and create a cursor
     conn = openConnection()
     curs = conn.cursor()
 
-    # Query to update an existing menu item in the MenuItem table
+    # Clean and format input data
+    categoryone = categoryone.strip().lower().capitalize()
+    categorytwo = categorytwo.strip().lower().capitalize()
+    categorythree = categorythree.strip().lower().capitalize()
+    coffeetype = coffeetype.strip().lower().capitalize()
+    milkkind = milkkind.strip().lower().capitalize()
+    description = description.strip()
+
+    # Check for required fields
+    if not name or not categoryone or not price:
+        return False
+
+    # Check if coffee type is provided but milk kind is missing
+    if not coffeetype and milkkind:
+        return False
+
+    # Validate categories
+    for category in [categoryone, categorytwo, categorythree]:
+        if category and getCategoryId(category) is None:
+            return False
+
+    # Validate coffee type and milk kind
+    for item, function in [(coffeetype, getCoffeeTypeId), (milkkind, getMilkKindId)]:
+        if item and function(item) is None:
+            return False
+
+    # Check length of name and description
+    if not checkLength(name, 30) or not checkLength(description, 150):
+        return False
+
+    # Format description if empty
+    if not description:
+        description = None
+
+    # Validate and format price
+    try:
+        price = round(float(price), 2)
+        if price < 0:
+            return False
+    except ValueError:
+        return False
+
+    # Construct query
     query = f"""
             UPDATE MenuItem 
             SET Description = '{description}', 
-                CategoryOne = {categoryone}, 
-                CategoryTwo = {categorytwo}, 
-                CategoryThree = {categorythree}, 
-                CoffeeType = {coffeetype}, 
-                MilkKind = {milkkind}, 
+                CategoryOne = {getCategoryId(categoryone)}, 
+                CategoryTwo = {getCategoryId(categorytwo) if categorytwo else "NULL"}, 
+                CategoryThree = {getCategoryId(categorythree) if categorythree else "NULL"}, 
+                CoffeeType = {getCoffeeTypeId(coffeetype) if coffeetype else "NULL"}, 
+                MilkKind = {getMilkKindId(milkkind) if milkkind else "NULL"}, 
                 Price = {price}, 
                 ReviewDate = '{reviewdate}', 
                 Reviewer = '{reviewer}'
-            WHERE Name = '{name}'
+            WHERE ID = {menuitem_id}
             """
 
     try:
