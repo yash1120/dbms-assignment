@@ -175,5 +175,56 @@ ORDER BY reviewdate, description, price DESC;
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION findingmenuitems(searchstring VARCHAR(30)) RETURNS
+TABLE (
+id INTEGER,
+name VARCHAR(30),
+description VARCHAR(150),
+category VARCHAR(10),
+option VARCHAR(10),
+price DECIMAL(6,2),
+reviewdate VARCHAR(10),
+reviewer VARCHAR(8))
+AS $$
+BEGIN
 
+RETURN QUERY
+SELECT 
+m.menuitemid as id, 
+m.name, 
+COALESCE(m.description, '') AS description, 
+CASE 
+WHEN cat2.categoryname is NULL THEN cat1.categoryname
+WHEN cat3.categoryname is NULL THEN cat1.categoryname || '|' || cat2.categoryname
+WHEN cat3.categoryname is not NULL THEN cat1.categoryname || '|' || cat2.categoryname || '|' || cat3.categoryname
+END AS category, 
+CASE 
+	WHEN (c.coffeetypename is NULL) and (mk.milkkindname is NULL) THEN ''
+	WHEN (c.coffeetypename is not NULL) and (mk.milkkindname is NULL) THEN c.coffeetypename
+	WHEN (c.coffeetypename is not NULL) and (mk.milkkindname is not NULL) THEN c.coffeetypename || ' - ' || mk.milkkindname
+END AS option,
+m.price, 
+CAST(TO_CHAR(m.reviewdate, 'dd-mm-yyyy') as VARCHAR(10)) as reviewdate,
+CAST(s.firstname || ' ' || s.lastname AS VARCHAR(30))
+as reviewer
+FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryid) 
+				LEFT OUTER JOIN category cat2 ON (m.categorytwo = cat2.categoryid)
+				LEFT OUTER JOIN category cat3 ON (m.categorythree = cat3.categoryid)
+				LEFT OUTER JOIN coffeetype c ON (m.coffeetype = c.coffeetypeid)
+				LEFT OUTER JOIN milkkind mk ON (m.milkkind = mk.milkkindid)
+				LEFT OUTER JOIN staff s ON (m.reviewer = s.staffid)
+WHERE (m.name ILIKE '%' || searchstring || '%' OR 
+	   m.description ILIKE '%' || searchstring || '%' OR 
+	   cat1.categoryname ILIKE '%' || searchstring || '%' OR 
+	   cat2.categoryname ILIKE '%' || searchstring || '%' OR 
+	   cat3.categoryname ILIKE '%' || searchstring || '%' OR 
+	   c.coffeetypename ILIKE '%' || searchstring || '%' OR 
+	   mk.milkkindname ILIKE '%' || searchstring || '%' or 
+	   s.firstname ILIKE '%' || searchstring || '%' or 
+	   s.lastname ILIKE '%' || searchstring || '%') And 
+	   				(m.reviewdate >= (CURRENT_DATE - INTERVAL '10 years') or m.reviewdate is null)
+ORDER BY s.firstname desc, m.reviewdate desc;
+
+END;
+$$ LANGUAGE plpgsql;
 
