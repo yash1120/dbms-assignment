@@ -317,10 +317,7 @@ def getMilkKindId(milkkind):
         return None
     return row[0][0]
 
-def none_if_empty_otherwise_int_value(value):
-    if value == '':
-        return None
-    return int(value)
+
 def checkLength(value, length):
     if len(value) > length:
         return False
@@ -339,11 +336,11 @@ def addMenuItem(
     conn = openConnection()
     curs = conn.cursor()
         
-    categoryone = categoryone.strip().lower()
-    categorytwo = categorytwo.strip().lower()
-    categorythree = categorythree.strip().lower()
-    coffeetype = coffeetype.strip().lower()
-    milkkind = milkkind.strip().lower()
+    categoryone = categoryone.strip().lower().capitalize()
+    categorytwo = categorytwo.strip().lower().capitalize()
+    categorythree = categorythree.strip().lower().capitalize()
+    coffeetype = coffeetype.strip().lower().capitalize()
+    milkkind = milkkind.strip().lower().capitalize()
     description = description.strip()
 
     # Query to insert a new menu item into the MenuItem table
@@ -361,20 +358,20 @@ def addMenuItem(
         return False
     
 
-    categoryone = getCategoryId(categoryone)
+    categoryone_id = getCategoryId(categoryone)
 
-    categorytwo = getCategoryId(categorytwo)
-    categorythree = getCategoryId(categorythree)
-    coffeetype = getCoffeeTypeId(coffeetype)
-    milkkind = getMilkKindId(milkkind)
+    categorytwo_id = getCategoryId(categorytwo)
+    categorythree_id = getCategoryId(categorythree)
+    coffeetype_id = getCoffeeTypeId(coffeetype)
+    milkkind_id = getMilkKindId(milkkind)
 
-    if categorytwo == None and categorytwo != '':
+    if categorytwo_id == None and categorytwo != '':
         return False
-    if categorythree == None and categorythree != '':
+    if categorythree_id == None and categorythree != '':
         return False
-    if coffeetype == None and coffeetype != '':
+    if coffeetype_id == None and coffeetype != '':
         return False
-    if milkkind == None and milkkind != '':
+    if milkkind_id == None and milkkind != '':
         return False
     
     if not checkLength(name, 30):
@@ -384,19 +381,32 @@ def addMenuItem(
     
     if description == '':
         description = None
-    categorytwo = none_if_empty_otherwise_int_value(categorytwo)
-    categorythree = none_if_empty_otherwise_int_value(categorythree)
-    coffeetype = none_if_empty_otherwise_int_value(coffeetype)
-    milkkind = none_if_empty_otherwise_int_value(milkkind)
-    try:
-        price = round(float(price),2)
-    except:
-        return False
     
 
-    query = f"""
-            INSERT INTO MenuItem (Name, Description, CategoryOne, CategoryTwo, CategoryThree, CoffeeType, MilkKind, Price)
-            VALUES ('{name}','{description}',{categoryone}, {categorytwo}, {categorythree}, {coffeetype}, {milkkind}, {price})
+    try:
+        price = round(float(price),2)
+    except ValueError:
+        return False
+    
+    if price < 0:
+        return False
+    
+    if categorytwo_id == None:
+        categorytwo_id = 'NULL'
+    if categorythree_id == None:
+        categorythree_id = 'NULL'
+    if coffeetype_id == None:
+        coffeetype_id = 'NULL'
+    if milkkind_id == None:
+        milkkind_id = 'NULL'
+    if description == None:
+        description = 'NULL'
+    
+
+    
+
+    query = f"""INSERT INTO MenuItem (Name, Description, CategoryOne, CategoryTwo, CategoryThree, CoffeeType, MilkKind, Price,ReviewDate,reviewer)
+            VALUES ('{name}','{description}',{categoryone_id}, {categorytwo_id}, {categorythree_id}, {coffeetype_id}, {milkkind_id}, {price},NULL,NULL)
             """
 
     try:
