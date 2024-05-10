@@ -129,6 +129,46 @@ WHERE m.reviewer = '{staffID}'
 ORDER BY m.reviewdate, m.description DESC
             """
 
+
+'''
+Attempt # 2
+
+CREATE VIEW viewingmenuitemlist AS
+SELECT m.menuitemid, m.name, m.description, cat1.categoryname as categoryname1, cat2.categoryname as categoryname2, cat3.categoryname as categoryname3, c.coffeetypename, mk.milkkindname, m.price, m.reviewdate, s.firstname, s.lastname 
+FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryid) 
+				LEFT OUTER JOIN category cat2 ON (m.categorytwo = cat2.categoryid)
+				LEFT OUTER JOIN category cat3 ON (m.categorythree = cat3.categoryid)
+				LEFT OUTER JOIN coffeetype c ON (m.coffeetype = c.coffeetypeid)
+				LEFT OUTER JOIN milkkind mk ON (m.milkkind = mk.milkkindid)
+				LEFT OUTER JOIN staff s ON (m.reviewer = s.staffid)
+WHERE m.reviewer = 'johndoe'
+ORDER BY m.reviewdate, m.description DESC;
+
+
+SELECT menuitemid as ID, name, COALESCE(description, '') AS description,
+CASE 
+WHEN categoryname2 is NULL THEN categoryname1
+WHEN categoryname3 is NULL THEN categoryname1 || '|' || categoryname2
+WHEN categoryname3 is not NULL THEN categoryname1 || '|' || categoryname2 || '|' || categoryname3
+END AS category, 
+CASE 
+WHEN (coffeetypename is NULL) and (milkkindname is NULL) THEN ''
+WHEN (coffeetypename is not NULL) and (milkkindname is NULL) THEN coffeetypename
+WHEN (coffeetypename is not NULL) and (milkkindname is not NULL) THEN coffeetypename || ' - ' || milkkindname
+END AS option, 
+price, 
+TO_CHAR(reviewdate, 'DD-MM-YYYY') AS reviewdate, 
+firstname || ' ' || lastname as reviewer
+FROM viewingmenuitemlist
+
+'''
+
+
+
+
+
+
+
     # Execute the query
     curs.execute(query)
 
@@ -195,6 +235,9 @@ FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryi
                 ORDER BY s.firstname desc, m.reviewdate desc
             
             """
+
+
+TO_CHAR(CURRENT_TIMESTAMP, 'dd-mm-yyyy')
 
     # Execute the query
     curs.execute(query)
