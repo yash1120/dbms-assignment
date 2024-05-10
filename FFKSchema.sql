@@ -99,7 +99,6 @@ INSERT INTO MenuItem (Name,Description,CategoryOne,CategoryTwo,CategoryThree,Cof
 COMMIT;
 
 
-
 CREATE OR REPLACE FUNCTION check_staff_login(
     p_staffID VARCHAR, 
     p_password VARCHAR

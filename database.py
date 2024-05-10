@@ -19,37 +19,11 @@ def formatMenuItems(rows):
         id = rows[i][0]
         name = rows[i][1]
         description = rows[i][2]
-        category1 = rows[i][3]
-        category2 = rows[i][4]
-        category3 = rows[i][5]
-        category = ""
-        if category1 != None:
-            category += category1
-        if category2 != None:
-            category += "|" + category2
-        if category3 != None:
-            category += "|" + category3
-
-        coffeetype = rows[i][6]
-        milkkind = rows[i][7]
-
-        if coffeetype != None:
-            option = coffeetype
-            if milkkind != None:
-                option += " - " + milkkind
-        else:
-            option = ""
-
-        price = rows[i][8]
-        if rows[i][9] != None:
-            reviewdate = rows[i][9].strftime("%d-%m-%Y")
-        else:
-            reviewdate = ""
-
-        if rows[i][10] != None:
-            reviewer = rows[i][10] + " " + rows[i][11]
-        else:
-            reviewer = ""
+        category = rows[i][3]
+        option = rows[i][4]
+        price = rows[i][5]
+        reviewdate = rows[i][6]
+        reviewer = rows[i][7]
         result.append(
             {
                 "menuitem_id": id,
@@ -69,8 +43,8 @@ def formatMenuItems(rows):
 
 def openConnection():
     # connection parameters - ENTER YOUR LOGIN AND PASSWORD HERE
-    userid = "y24s1c9120_yash0351"
-    passwd = "yashgoyal"
+    userid = "y24s1c9120_alei5293"
+    passwd = "Sunny445."
     myHost = "awsprddbs4836.shared.sydney.edu.au"
 
     # Create a connection to the database
@@ -108,6 +82,7 @@ def checkStaffLogin(staffID, password):
         return None
     finally:
         curs.close()
+        conn.close()
 
 
 
@@ -133,39 +108,19 @@ List all the associated menu items in the database by staff
 
 def findMenuItemsByStaff(staffID):
     # Establish a database connection and create a cursor
-    curs = openConnection().cursor()
-    result = curs.callproc('viewingmenuitemlist', (staffID,))
-    print(result)
-
-    # Query to select menu items reviewed by the given staff member
-    query = f"""
-SELECT m.menuitemid, m.name, m.description, cat1.categoryname as categoryname1, cat2.categoryname as categoryname2, cat3.categoryname as categoryname3, c.coffeetypename, mk.milkkindname, m.price, m.reviewdate, s.firstname, s.lastname 
-FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryid) 
-				LEFT OUTER JOIN category cat2 ON (m.categorytwo = cat2.categoryid)
-				LEFT OUTER JOIN category cat3 ON (m.categorythree = cat3.categoryid)
-				LEFT OUTER JOIN coffeetype c ON (m.coffeetype = c.coffeetypeid)
-				LEFT OUTER JOIN milkkind mk ON (m.milkkind = mk.milkkindid)
-				LEFT OUTER JOIN staff s ON (m.reviewer = s.staffid)
-WHERE m.reviewer = '{staffID}'
-ORDER BY m.reviewdate, m.description DESC
-            """
-
-    # Execute the query
-    curs.execute(query)
-
-    # Fetch all the rows
-    rows = curs.fetchall()
-    if rows == []:
+    try:
+        conn = openConnection()
+        curs = conn.cursor()
+        curs.callproc('viewingmenuitemlist', (staffID,))
+        result = curs.fetchall()
+        formatted_result = formatMenuItems(result)
+        return formatted_result
+    except psycopg2.Error as err:
+        print(f"Error: {err}")
         return None
-
-    # Close the cursor
-    curs.close()
-    # print(rows)
-    result = formatMenuItems(rows)
-
-    # Return the list of menu items reviewed by the staff member
-    # print(result)
-    return result
+    finally:
+        curs.close()
+        conn.close()
 
 
 """
