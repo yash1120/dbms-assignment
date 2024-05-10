@@ -115,6 +115,8 @@ List all the associated menu items in the database by staff
 def findMenuItemsByStaff(staffID):
     # Establish a database connection and create a cursor
     curs = openConnection().cursor()
+    result = curs.callproc("viewingmenuitemlist",(staffID))
+    print(result)
 
     # Query to select menu items reviewed by the given staff member
     query = f"""
@@ -131,10 +133,41 @@ ORDER BY m.reviewdate, m.description DESC
 
 
 '''
-Attempt # 2
 
-CREATE VIEW viewingmenuitemlist AS
-SELECT m.menuitemid, m.name, m.description, cat1.categoryname as categoryname1, cat2.categoryname as categoryname2, cat3.categoryname as categoryname3, c.coffeetypename, mk.milkkindname, m.price, m.reviewdate, s.firstname, s.lastname 
+FUNCTION CREATED FOR PART 2
+
+
+CREATE OR REPLACE FUNCTION viewingmenuitemlist(sid varchar(10)) RETURNS
+TABLE (
+id INTEGER,
+name VARCHAR(30),
+description VARCHAR(150),
+category VARCHAR(10),
+option VARCHAR(10),
+price DECIMAL(6,2),
+reviewdate DATE,
+reviewer VARCHAR(100))
+AS $$
+BEGIN
+
+RETURN QUERY
+SELECT 
+m.menuitemid as id, 
+m.name, 
+COALESCE(m.description, '') AS description, 
+CASE 
+WHEN cat2.categoryname is NULL THEN cat1.categoryname
+WHEN cat3.categoryname is NULL THEN cat1.categoryname || '|' || cat2.categoryname
+WHEN cat3.categoryname is not NULL THEN cat1.categoryname || '|' || cat2.categoryname || '|' || cat3.categoryname
+END AS category, 
+CASE 
+WHEN (c.coffeetypename is NULL) and (mk.milkkindname is NULL) THEN ''
+WHEN (c.coffeetypename is not NULL) and (mk.milkkindname is NULL) THEN c.coffeetypename
+WHEN (c.coffeetypename is not NULL) and (mk.milkkindname is not NULL) THEN c.coffeetypename || ' - ' || mk.milkkindname
+END AS option,
+m.price, 
+m.reviewdate, 
+s.firstname || ' ' || s.lastname as reviewer
 FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryid) 
 				LEFT OUTER JOIN category cat2 ON (m.categorytwo = cat2.categoryid)
 				LEFT OUTER JOIN category cat3 ON (m.categorythree = cat3.categoryid)
@@ -142,25 +175,10 @@ FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryi
 				LEFT OUTER JOIN milkkind mk ON (m.milkkind = mk.milkkindid)
 				LEFT OUTER JOIN staff s ON (m.reviewer = s.staffid)
 WHERE m.reviewer = 'johndoe'
-ORDER BY m.reviewdate, m.description DESC;
+ORDER BY reviewdate, description, price DESC;
 
-
-SELECT menuitemid as ID, name, COALESCE(description, '') AS description,
-CASE 
-WHEN categoryname2 is NULL THEN categoryname1
-WHEN categoryname3 is NULL THEN categoryname1 || '|' || categoryname2
-WHEN categoryname3 is not NULL THEN categoryname1 || '|' || categoryname2 || '|' || categoryname3
-END AS category, 
-CASE 
-WHEN (coffeetypename is NULL) and (milkkindname is NULL) THEN ''
-WHEN (coffeetypename is not NULL) and (milkkindname is NULL) THEN coffeetypename
-WHEN (coffeetypename is not NULL) and (milkkindname is not NULL) THEN coffeetypename || ' - ' || milkkindname
-END AS option, 
-price, 
-TO_CHAR(reviewdate, 'DD-MM-YYYY') AS reviewdate, 
-firstname || ' ' || lastname as reviewer
-FROM viewingmenuitemlist
-
+END;
+$$ LANGUAGE plpgsql;
 '''
 
 
@@ -169,10 +187,52 @@ FROM viewingmenuitemlist
 
 
 
+# '''
+# Attempt # 2F
+
+# CREATE PROCEDURE viewingmenuitemlist sid nvarchar(10)
+
+# AS
+
+# CREATE VIEW viewingmenuitemlist AS
+# SELECT m.menuitemid, m.name, m.description, cat1.categoryname as categoryname1, cat2.categoryname as categoryname2, cat3.categoryname as categoryname3, c.coffeetypename, mk.milkkindname, m.price, m.reviewdate, s.firstname, s.lastname 
+# FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryid) 
+# 				LEFT OUTER JOIN category cat2 ON (m.categorytwo = cat2.categoryid)
+# 				LEFT OUTER JOIN category cat3 ON (m.categorythree = cat3.categoryid)
+# 				LEFT OUTER JOIN coffeetype c ON (m.coffeetype = c.coffeetypeid)
+# 				LEFT OUTER JOIN milkkind mk ON (m.milkkind = mk.milkkindid)
+# 				LEFT OUTER JOIN staff s ON (m.reviewer = s.staffid)
+# WHERE m.reviewer = sid
+# ORDER BY m.reviewdate, m.description DESC;
+
+# SELECT menuitemid as ID, name, COALESCE(description, '') AS description,
+# CASE 
+# WHEN categoryname2 is NULL THEN categoryname1
+# WHEN categoryname3 is NULL THEN categoryname1 || '|' || categoryname2
+# WHEN categoryname3 is not NULL THEN categoryname1 || '|' || categoryname2 || '|' || categoryname3
+# END AS category, 
+# CASE 
+# WHEN (coffeetypename is NULL) and (milkkindname is NULL) THEN ''
+# WHEN (coffeetypename is not NULL) and (milkkindname is NULL) THEN coffeetypename
+# WHEN (coffeetypename is not NULL) and (milkkindname is not NULL) THEN coffeetypename || ' - ' || milkkindname
+# END AS option, 
+# price, 
+# TO_CHAR(reviewdate, 'DD-MM-YYYY') AS reviewdate, 
+# firstname || ' ' || lastname as reviewer
+# FROM viewingmenuitemlist;
+
+# GO;
+
+# EXEC viewingmenuitemlist @staffid = 'johndoe'
+
+
+
+# '''
+
     # Execute the query
     curs.execute(query)
 
-    # Fetch all the rows
+            # Fetch all the rows
     rows = curs.fetchall()
     if rows == []:
         return None
@@ -182,8 +242,8 @@ FROM viewingmenuitemlist
     # print(rows)
     result = formatMenuItems(rows)
 
-    # Return the list of menu items reviewed by the staff member
-    # print(result)
+# Return the list of menu items reviewed by the staff member
+# print(result)
     return result
 
 
@@ -237,7 +297,7 @@ FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryi
             """
 
 
-TO_CHAR(CURRENT_TIMESTAMP, 'dd-mm-yyyy')
+# TO_CHAR(CURRENT_TIMESTAMP, 'dd-mm-yyyy')
 
     # Execute the query
     curs.execute(query)
@@ -255,37 +315,37 @@ TO_CHAR(CURRENT_TIMESTAMP, 'dd-mm-yyyy')
     # Return the list of menu items matching the search criteria
     return result
 
-'''
-SELECT m.menuitemid, m.name, m.description, cat1.categoryname as categoryname1, cat2.categoryname as categoryname2, cat3.categoryname as categoryname3, c.coffeetypename, mk.milkkindname, m.price, m.reviewdate, s.firstname, s.lastname 
-FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryid) 
-				LEFT OUTER JOIN category cat2 ON (m.categorytwo = cat2.categoryid)
-				LEFT OUTER JOIN category cat3 ON (m.categorythree = cat3.categoryid)
-				LEFT OUTER JOIN coffeetype c ON (m.coffeetype = c.coffeetypeid)
-				LEFT OUTER JOIN milkkind mk ON (m.milkkind = mk.milkkindid)
-				LEFT OUTER JOIN staff s ON (m.reviewer = s.staffid)
-WHERE 	(LOWER(m.name) like '%fee%' OR 
-		LOWER(m.description) like '%fee%' OR 
-		LOWER(cat1.categoryname) like '%fee%' OR 
-		LOWER(cat2.categoryname) like '%fee%' OR 
-		LOWER(cat3.categoryname) like '%fee%' OR 
-		LOWER(c.coffeetypename) like '%fee%' OR 
-		LOWER(mk.milkkindname) like '%fee%' OR 
-		LOWER(s.firstname) like '%fee%' OR 
-		LOWER(s.lastname) like '%fee%') AND 
-		(m.reviewdate > '2014/05/03' OR m.reviewdate IS NULL)
-ORDER BY s.firstname DESC, m.reviewdate DESC
+# '''
+# SELECT m.menuitemid, m.name, m.description, cat1.categoryname as categoryname1, cat2.categoryname as categoryname2, cat3.categoryname as categoryname3, c.coffeetypename, mk.milkkindname, m.price, m.reviewdate, s.firstname, s.lastname 
+# FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryid) 
+# 				LEFT OUTER JOIN category cat2 ON (m.categorytwo = cat2.categoryid)
+# 				LEFT OUTER JOIN category cat3 ON (m.categorythree = cat3.categoryid)
+# 				LEFT OUTER JOIN coffeetype c ON (m.coffeetype = c.coffeetypeid)
+# 				LEFT OUTER JOIN milkkind mk ON (m.milkkind = mk.milkkindid)
+# 				LEFT OUTER JOIN staff s ON (m.reviewer = s.staffid)
+# WHERE 	(LOWER(m.name) like '%fee%' OR 
+# 		LOWER(m.description) like '%fee%' OR 
+# 		LOWER(cat1.categoryname) like '%fee%' OR 
+# 		LOWER(cat2.categoryname) like '%fee%' OR 
+# 		LOWER(cat3.categoryname) like '%fee%' OR 
+# 		LOWER(c.coffeetypename) like '%fee%' OR 
+# 		LOWER(mk.milkkindname) like '%fee%' OR 
+# 		LOWER(s.firstname) like '%fee%' OR 
+# 		LOWER(s.lastname) like '%fee%') AND 
+# 		(m.reviewdate > '2014/05/03' OR m.reviewdate IS NULL)
+# ORDER BY s.firstname DESC, m.reviewdate DESC
 
 
-'''
-
-
-
+# '''
 
 
 
-"""
-Add a new menu item
-"""
+
+
+
+# """
+# Add a new menu item
+# """
 
 def getCategoryId(category):
     curs = openConnection().cursor()
