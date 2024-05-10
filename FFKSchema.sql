@@ -204,9 +204,8 @@ CASE
 	WHEN (c.coffeetypename is not NULL) and (mk.milkkindname is not NULL) THEN c.coffeetypename || ' - ' || mk.milkkindname
 END AS option,
 m.price, 
-CAST(TO_CHAR(m.reviewdate, 'dd-mm-yyyy') as VARCHAR(10)) as reviewdate,
-CAST(s.firstname || ' ' || s.lastname AS VARCHAR(30))
-as reviewer
+COALESCE(CAST(TO_CHAR(m.reviewdate, 'dd-mm-yyyy') as VARCHAR(10)), '') as reviewdate,
+COALESCE((CAST(s.firstname || ' ' || s.lastname AS VARCHAR(30))), '') as reviewer
 FROM menuitem m LEFT OUTER JOIN category cat1 ON (m.categoryone = cat1.categoryid) 
 				LEFT OUTER JOIN category cat2 ON (m.categorytwo = cat2.categoryid)
 				LEFT OUTER JOIN category cat3 ON (m.categorythree = cat3.categoryid)
