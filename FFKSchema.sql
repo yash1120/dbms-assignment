@@ -97,3 +97,34 @@ INSERT INTO MenuItem (Name,Description,CategoryOne,CategoryTwo,CategoryThree,Cof
 	('Coffee Pancake','A short stack of pancakes flecked with espresso powder and mini chocolate chips',1,NULL,NULL,NULL,NULL,8.95,'08/04/2014','janedoe');
 
 COMMIT;
+
+
+
+CREATE OR REPLACE FUNCTION check_staff_login(
+    p_staffID VARCHAR, 
+    p_password VARCHAR
+)
+RETURNS TABLE (
+    staff_id VARCHAR,
+    staff_password VARCHAR,
+    staff_firstname VARCHAR,
+    staff_lastname VARCHAR,
+    staff_age INT,
+    staff_salary DECIMAL(9,2)
+)
+AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        staffid,
+        password AS staff_password,
+        firstname,
+        lastname,
+        age,
+        salary
+    FROM 
+        Staff 
+    WHERE 
+        StaffID = p_staffID AND Password = p_password;
+END;
+$$ LANGUAGE plpgsql;

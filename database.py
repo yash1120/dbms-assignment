@@ -69,8 +69,8 @@ def formatMenuItems(rows):
 
 def openConnection():
     # connection parameters - ENTER YOUR LOGIN AND PASSWORD HERE
-    userid = "y24s1c9120_alei5293"
-    passwd = "Sunny445."
+    userid = "y24s1c9120_yash0351"
+    passwd = "yashgoyal"
     myHost = "awsprddbs4836.shared.sydney.edu.au"
 
     # Create a connection to the database
@@ -91,64 +91,24 @@ def openConnection():
 Validate staff based on username and password
 """
 
-def checkAndCreateCheckStaffLoginProcedure():
-    conn = openConnection()
-    curs = conn.cursor()
-    try:
-        curs.execute("SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'check_staff_login')")
-        procedure_exists = curs.fetchone()[0]
-        if not procedure_exists:
-            curs.execute(""" 
-                CREATE OR REPLACE FUNCTION check_staff_login(
-                    p_staffID VARCHAR, 
-                    p_password VARCHAR, 
-                    OUT p_result BOOLEAN
-                )
-                AS $$
-                BEGIN
-                    SELECT TRUE INTO p_result 
-                    FROM staff 
-                    WHERE staffID = p_staffID 
-                    AND password = p_password 
-                    LIMIT 1;
-                    
-                    EXCEPTION 
-                        WHEN NO_DATA_FOUND THEN
-                            p_result := FALSE;
-                END;
-                $$ LANGUAGE plpgsql;
-            """)
-            print("Stored procedure check_staff_login created successfully")
-            curs.execute("COMMIT")
-        else:
-            print("Stored procedure check_staff_login already exists")
-    except psycopg2.Error as err:
-        print(f"Error: {err}")
-    finally:
-        curs.close()
 
 def checkStaffLogin(staffID, password):
     conn = openConnection()
-    
+
+    curs = conn.cursor()
     try:
-        checkAndCreateCheckStaffLoginProcedure()
-        curs = conn.cursor()
-        try:
-            curs.callproc('check_staff_login', (staffID, password,))
-            result = curs.fetchone()[0]
-            if result:
-                q = f"SELECT * FROM staff WHERE staffID = '{staffID}' and password = '{password}'"
-                curs.execute(q)
-                row = curs.fetchall()
-                return row[0]
-        except psycopg2.Error as err:
-            print(f"Error: {err}")
+        curs.callproc('check_staff_login', (staffID, password,))
+        result = curs.fetchall()
+        print(result)
+        if result == []:
             return None
-        finally:
-            curs.close()
+        return result[0]
     except psycopg2.Error as err:
         print(f"Error: {err}")
         return None
+    finally:
+        curs.close()
+
 
 
 # def checkStaffLogin(staffID, password):
@@ -174,6 +134,8 @@ List all the associated menu items in the database by staff
 def findMenuItemsByStaff(staffID):
     # Establish a database connection and create a cursor
     curs = openConnection().cursor()
+    result = curs.callproc('viewingmenuitemlist', (staffID,))
+    print(result)
 
     # Query to select menu items reviewed by the given staff member
     query = f"""
