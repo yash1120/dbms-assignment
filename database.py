@@ -180,6 +180,15 @@ def addMenuItem(name, description, categoryone, categorytwo, categorythree, coff
     # Establish a database connection and create a cursor
     conn = openConnection()
     curs = conn.cursor()
+    try :
+        curs.callproc('addmenuitem', (name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price,))
+        result = curs.fetchall()
+        print(result)
+        if result is not None:
+            return True
+    except psycopg2.Error as err:
+        print(f"Error: {err}")
+        return False
 
 """
 CREATE OR REPLACE FUNCTION addmenuitem(
