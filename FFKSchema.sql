@@ -260,6 +260,15 @@ BEGIN
     IF a_price <= 0 THEN
         RAISE EXCEPTION 'Price cannot be zero';
     END IF;
+	IF INITCAP(TRIM(u_categorytwo)) = INITCAP(TRIM(u_categoryone)) THEN
+		RAISE EXCEPTION 'Please write a different category';
+	END IF;
+	IF INITCAP(TRIM(u_categorythree)) = INITCAP(TRIM(u_categorytwo)) THEN
+		RAISE EXCEPTION 'Please write a different category';
+	END IF;
+	IF INITCAP(TRIM(u_categorythree)) = INITCAP(TRIM(u_categoryone)) THEN
+		RAISE EXCEPTION 'Please write a different category';
+	END IF;
     INSERT INTO menuitem (name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price)
     VALUES (
         INITCAP(TRIM(a_name)), 
@@ -273,3 +282,70 @@ BEGIN
     );
 END;
 $$; 
+
+
+
+CREATE OR REPLACE PROCEDURE updatemenuitem(
+	u_menuitemid INT,
+	u_name VARCHAR(30),
+	u_description VARCHAR(150),
+	u_categoryone VARCHAR(10),
+	u_categorytwo VARCHAR(10),
+	u_categorythree VARCHAR(10),
+	u_coffeetype VARCHAR(10),
+	u_milkkind VARCHAR(10),
+	u_price DECIMAL(6,2),
+	u_reviewdate DATE,
+	u_reviewer VARCHAR(30))
+LANGUAGE plpgsql
+AS $$
+
+DECLARE 
+coffee_id INT; 
+milkkind_id INT;
+
+BEGIN
+	SELECT coffeetypeid INTO coffee_id FROM coffeetype WHERE coffeetypename = INITCAP(TRIM(u_coffeetype));
+	SELECT milkkindid INTO milkkind_id FROM milkkind WHERE milkkindname = INITCAP(TRIM(u_milkkind));
+    IF coffee_id IS NOT NULL AND milkkind_id IS NULL THEN
+        RAISE EXCEPTION 'You must select milk type along with coffee type';
+    END IF;
+    IF u_price <= 0 THEN
+        RAISE EXCEPTION 'Price cannot be zero';
+    END IF;
+	IF INITCAP(TRIM(u_categorytwo)) = INITCAP(TRIM(u_categoryone)) THEN
+		RAISE EXCEPTION 'Please write a different category, cat2 = cat1';
+	END IF;
+	IF (u_categorythree != '' AND u_categorytwo != '') AND 
+	   (INITCAP(TRIM(u_categorythree)) = INITCAP(TRIM(u_categorytwo))) THEN
+		RAISE EXCEPTION 'Please write a different category, cat3 = cat2';
+	END IF;
+	IF  INITCAP(TRIM(u_categorythree)) = INITCAP(TRIM(u_categoryone)) THEN
+		RAISE EXCEPTION 'Please write a different category, cat3 = cat1';
+	END IF;
+
+	UPDATE menuitem
+	SET 
+		name = INITCAP(TRIM(u_name)),
+		description = TRIM(u_description), 
+		categoryone = (SELECT categoryid FROM category WHERE categoryname = INITCAP(TRIM(u_categoryOne))),
+		categorytwo = (SELECT categoryid FROM category WHERE categoryname = INITCAP(TRIM(u_categoryTwo))),
+		categorythree = (SELECT categoryid FROM category WHERE categoryname = INITCAP(TRIM(u_categoryThree))),
+		coffeetype = (SELECT coffeetypeid FROM coffeetype WHERE coffeetypename = INITCAP(TRIM(u_coffeetype))),
+		milkkind = (SELECT milkkindid FROM milkkind WHERE milkkindname = INITCAP(TRIM(u_milkkind))),
+		price = u_price, 
+		reviewdate = 
+			CASE 
+				WHEN reviewdate = '' THEN NULL 
+				ELSE reviewdate
+			END,
+		reviewer = 
+			CASE 
+				WHEN reviewer = '' THEN NULL
+				ELSE reviewer
+			END
+	WHERE menuitemid = u_menuitemid;
+END;
+$$;
+
+
