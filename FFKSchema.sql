@@ -311,7 +311,7 @@ BEGIN
         RAISE EXCEPTION 'You must select milk type along with coffee type';
     END IF;
     IF u_price <= 0 THEN
-        RAISE EXCEPTION 'Price cannot be zero';
+        RAISE EXCEPTION 'Price cannot be zero ot negative';
     END IF;
 	IF INITCAP(TRIM(u_categorytwo)) = INITCAP(TRIM(u_categoryone)) THEN
 		RAISE EXCEPTION 'Please write a different category, cat2 = cat1';
@@ -334,16 +334,8 @@ BEGIN
 		coffeetype = (SELECT coffeetypeid FROM coffeetype WHERE coffeetypename = INITCAP(TRIM(u_coffeetype))),
 		milkkind = (SELECT milkkindid FROM milkkind WHERE milkkindname = INITCAP(TRIM(u_milkkind))),
 		price = u_price, 
-		reviewdate = 
-			CASE 
-				WHEN reviewdate = '' THEN NULL 
-				ELSE reviewdate
-			END,
-		reviewer = 
-			CASE 
-				WHEN reviewer = '' THEN NULL
-				ELSE reviewer
-			END
+		reviewdate = NULLIF(u_reviewdate, ''),
+		reviewer = NULLIF(u_reviewer, '')
 	WHERE menuitemid = u_menuitemid;
 END;
 $$;
