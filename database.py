@@ -290,36 +290,11 @@ $$ LANGUAGE plpgsql;
             return False
     except ValueError:
         return False
-
-    # Format optional fields if not provided
-    categorytwo_id = getCategoryId(categorytwo) if categorytwo else "NULL"
-    categorythree_id = getCategoryId(categorythree) if categorythree else "NULL"
-    coffeetype_id = getCoffeeTypeId(coffeetype) if coffeetype else "NULL"
-    milkkind_id = getMilkKindId(milkkind) if milkkind else "NULL"
-    description = f"'{description}'" if description else "NULL"
-
-    # Construct query
-    query = f"""INSERT INTO MenuItem (Name, Description, CategoryOne, CategoryTwo, CategoryThree, CoffeeType, MilkKind, Price, ReviewDate, reviewer)
-                VALUES ('{name}', {description}, {getCategoryId(categoryone)}, {categorytwo_id}, {categorythree_id}, {coffeetype_id}, {milkkind_id}, {price}, NULL, NULL)
-            """
-
-    try:
-        # Execute the query
-        curs.execute(query)
-        # Commit the transaction
-        conn.commit()
-        # Close the cursor and connection
+    finally:
+        
         curs.close()
         conn.close()
-        return True  # Return True if the item was added successfully
-    except Exception as e:
-        # If an error occurs, rollback the transaction and return False
-        conn.rollback()
-        curs.close()
-        conn.close()
-        print("Error:", e)
-        return False
-'''
+
 
 """
 Update an existing menu item
