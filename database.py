@@ -181,14 +181,17 @@ def addMenuItem(name, description, categoryone, categorytwo, categorythree, coff
     conn = openConnection()
     curs = conn.cursor()
     try :
-        curs.callproc('addmenuitem', (name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price,))
-        result = curs.fetchall()
-        print(result)
-        if result is not None:
-            return True
+        query = f"CALL addMenuItem('{name}', '{description}', '{categoryone}', '{categorytwo}', '{categorythree}', '{coffeetype}', '{milkkind}', {price})"
+        curs.execute(query)
+        #curs.callproc('addmenuitem', (name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price,))
+        conn.commit()
+        return True
     except psycopg2.Error as err:
         print(f"Error: {err}")
         return False
+    finally:
+        curs.close()
+        conn.close()
 
 """
 CREATE OR REPLACE FUNCTION addmenuitem(
@@ -243,139 +246,86 @@ $$ LANGUAGE plpgsql;
 
 
 
+# """
+# Update an existing menu item
+# """
 
 
-'''
+# def updateMenuItem(menuitem_id, name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price, reviewdate, reviewer):
+#     # Establish a database connection and create a cursor
+#     conn = openConnection()
+#     curs = conn.cursor()
 
+#     # Clean and format input data
+#     categoryone = categoryone.strip().lower().capitalize()
+#     categorytwo = categorytwo.strip().lower().capitalize()
+#     categorythree = categorythree.strip().lower().capitalize()
+#     coffeetype = coffeetype.strip().lower().capitalize()
+#     milkkind = milkkind.strip().lower().capitalize()
+#     description = description.strip()
 
+#     # Check for required fields
+#     if not name or not categoryone or not price:
+#         return False
 
-    # Clean and format input data
-    categoryone = categoryone.strip().lower().capitalize()
-    categorytwo = categorytwo.strip().lower().capitalize()
-    categorythree = categorythree.strip().lower().capitalize()
-    coffeetype = coffeetype.strip().lower().capitalize()
-    milkkind = milkkind.strip().lower().capitalize()
-    description = description.strip()
+#     # Check if coffee type is provided but milk kind is missing
+#     if not coffeetype and milkkind:
+#         return False
 
-    # Check for required fields
-    if not name or not categoryone or not price:
-        return False
+#     # Validate categories
+#     for category in [categoryone, categorytwo, categorythree]:
+#         if category and getCategoryId(category) is None:
+#             return False
 
-    # Check if coffee type is provided but milk kind is missing
-    if not coffeetype and milkkind:
-        return False
+#     # Validate coffee type and milk kind
+#     for item, function in [(coffeetype, getCoffeeTypeId), (milkkind, getMilkKindId)]:
+#         if item and function(item) is None:
+#             return False
 
-    # Validate categories
-    for category in [categoryone, categorytwo, categorythree]:
-        if category and getCategoryId(category) is None:
-            return False
+#     # Check length of name and description
+#     if not checkLength(name, 30) or not checkLength(description, 150):
+#         return False
 
-    # Validate coffee type and milk kind
-    for item, function in [(coffeetype, getCoffeeTypeId), (milkkind, getMilkKindId)]:
-        if item and function(item) is None:
-            return False
+#     # Format description if empty
+#     if not description:
+#         description = None
 
-    # Check length of name and description
-    if not checkLength(name, 30) or not checkLength(description, 150):
-        return False
+#     # Validate and format price
+#     try:
+#         price = round(float(price), 2)
+#         if price < 0:
+#             return False
+#     except ValueError:
+#         return False
 
-    # Format description if empty
-    if not description:
-        description = None
+#     # Construct query
+#     query = f"""
+#             UPDATE MenuItem 
+#             SET Description = '{description}', 
+#                 CategoryOne = {getCategoryId(categoryone)}, 
+#                 CategoryTwo = {getCategoryId(categorytwo) if categorytwo else "NULL"}, 
+#                 CategoryThree = {getCategoryId(categorythree) if categorythree else "NULL"}, 
+#                 CoffeeType = {getCoffeeTypeId(coffeetype) if coffeetype else "NULL"}, 
+#                 MilkKind = {getMilkKindId(milkkind) if milkkind else "NULL"}, 
+#                 Price = {price}, 
+#                 ReviewDate = '{reviewdate}', 
+#                 Reviewer = '{reviewer}'
+#             WHERE ID = {menuitem_id}
+#             """
 
-    # Validate and format price
-    try:
-        price = round(float(price), 2)
-        if price < 0:
-            return False
-    except ValueError:
-        return False
-    finally:
-        
-        curs.close()
-        conn.close()
-
-
-"""
-Update an existing menu item
-"""
-
-
-def updateMenuItem(menuitem_id, name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price, reviewdate, reviewer):
-    # Establish a database connection and create a cursor
-    conn = openConnection()
-    curs = conn.cursor()
-
-    # Clean and format input data
-    categoryone = categoryone.strip().lower().capitalize()
-    categorytwo = categorytwo.strip().lower().capitalize()
-    categorythree = categorythree.strip().lower().capitalize()
-    coffeetype = coffeetype.strip().lower().capitalize()
-    milkkind = milkkind.strip().lower().capitalize()
-    description = description.strip()
-
-    # Check for required fields
-    if not name or not categoryone or not price:
-        return False
-
-    # Check if coffee type is provided but milk kind is missing
-    if not coffeetype and milkkind:
-        return False
-
-    # Validate categories
-    for category in [categoryone, categorytwo, categorythree]:
-        if category and getCategoryId(category) is None:
-            return False
-
-    # Validate coffee type and milk kind
-    for item, function in [(coffeetype, getCoffeeTypeId), (milkkind, getMilkKindId)]:
-        if item and function(item) is None:
-            return False
-
-    # Check length of name and description
-    if not checkLength(name, 30) or not checkLength(description, 150):
-        return False
-
-    # Format description if empty
-    if not description:
-        description = None
-
-    # Validate and format price
-    try:
-        price = round(float(price), 2)
-        if price < 0:
-            return False
-    except ValueError:
-        return False
-
-    # Construct query
-    query = f"""
-            UPDATE MenuItem 
-            SET Description = '{description}', 
-                CategoryOne = {getCategoryId(categoryone)}, 
-                CategoryTwo = {getCategoryId(categorytwo) if categorytwo else "NULL"}, 
-                CategoryThree = {getCategoryId(categorythree) if categorythree else "NULL"}, 
-                CoffeeType = {getCoffeeTypeId(coffeetype) if coffeetype else "NULL"}, 
-                MilkKind = {getMilkKindId(milkkind) if milkkind else "NULL"}, 
-                Price = {price}, 
-                ReviewDate = '{reviewdate}', 
-                Reviewer = '{reviewer}'
-            WHERE ID = {menuitem_id}
-            """
-
-    try:
-        # Execute the query
-        curs.execute(query)
-        # Commit the transaction
-        conn.commit()
-        # Close the cursor and connection
-        curs.close()
-        conn.close()
-        return True  # Return True if the item was updated successfully
-    except Exception as e:
-        # If an error occurs, rollback the transaction and return False
-        conn.rollback()
-        curs.close()
-        conn.close()
-        print("Error:", e)
-        return False
+#     try:
+#         # Execute the query
+#         curs.execute(query)
+#         # Commit the transaction
+#         conn.commit()
+#         # Close the cursor and connection
+#         curs.close()
+#         conn.close()
+#         return True  # Return True if the item was updated successfully
+#     except Exception as e:
+#         # If an error occurs, rollback the transaction and return False
+#         conn.rollback()
+#         curs.close()
+#         conn.close()
+#         print("Error:", e)
+#         return False

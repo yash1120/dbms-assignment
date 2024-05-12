@@ -233,7 +233,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE OR REPLACE FUNCTION addmenuitem(
+CREATE OR REPLACE PROCEDURE addmenuitem(
     a_name VARCHAR(30),
     a_description VARCHAR(150),
     a_categoryOne VARCHAR(10),
@@ -242,25 +242,24 @@ CREATE OR REPLACE FUNCTION addmenuitem(
     a_coffeetype VARCHAR(10),
     a_milkkind VARCHAR(10),
     a_price DECIMAL(6,2)
-) RETURNS TABLE (
-    menuitemid INTEGER,
-    name VARCHAR(30),
-    description VARCHAR(150),
-    categoryone INTEGER,
-    categorytwo INTEGER,
-    categorythree INTEGER,
-    coffeetype INTEGER,
-    milkkind INTEGER,
-    price DECIMAL(6,2)
-) AS $$
+) 
+LANGUAGE plpgsql
+AS
+$$
+
+DECLARE 
+coffee_id INT; 
+milkkind_id INT;
+
 BEGIN
-    IF coffeeId IS NOT NULL AND milkId IS NULL THEN
+	SELECT coffeetypeid INTO coffee_id FROM coffeetype WHERE coffeetypename = INITCAP(TRIM(a_coffeetype));
+	SELECT milkkindid INTO milkkind_id FROM milkkind WHERE milkkindname = INITCAP(TRIM(a_milkkind));
+    IF coffee_id IS NOT NULL AND milkkind_id IS NULL THEN
         RAISE EXCEPTION 'You must select milk type along with coffee type';
     END IF;
-    IF price <= 0 THEN
-        RAISE EXCEPTION 'Price cannot be zero'
+    IF a_price <= 0 THEN
+        RAISE EXCEPTION 'Price cannot be zero';
     END IF;
-    RETURN QUERY
     INSERT INTO menuitem (name, description, categoryone, categorytwo, categorythree, coffeetype, milkkind, price)
     VALUES (
         INITCAP(TRIM(a_name)), 
@@ -271,19 +270,6 @@ BEGIN
         (SELECT coffeetypeid FROM coffeetype WHERE coffeetypename = INITCAP(TRIM(a_coffeetype))), 
         (SELECT milkkindid FROM milkkind WHERE milkkindname = INITCAP(TRIM(a_milkkind))), 
         a_price
-    )
-    RETURNING
-        menuitem.menuitemid, 
-        menuitem.name, 
-        menuitem.description, 
-        menuitem.categoryone, 
-        menuitem.categorytwo, 
-        menuitem.categorythree, 
-        menuitem.coffeetype, 
-        menuitem.milkkind, 
-        menuitem.price;
+    );
 END;
-$$ LANGUAGE plpgsql;
-
-
-
+$$; 
