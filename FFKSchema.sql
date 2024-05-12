@@ -131,6 +131,8 @@ $$ LANGUAGE plpgsql;
 
 
 
+
+
 CREATE OR REPLACE FUNCTION viewingmenuitemlist(sid varchar(10)) RETURNS
 TABLE (
 id INTEGER,
@@ -174,6 +176,7 @@ ORDER BY reviewdate, description, price DESC;
 
 END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION findingmenuitems(searchstring VARCHAR(30)) RETURNS
 TABLE (
